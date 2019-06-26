@@ -37,6 +37,8 @@ def _generateAndExecutePipeline() {
 
                     stage('The Awesome Part') {
 
+                        _assertValidBranchType()
+
                         scmMetadata = checkout scm
 
                         pipeline = _generatePipeline(scmMetadata)
@@ -44,12 +46,25 @@ def _generateAndExecutePipeline() {
 
                     pipeline()
 
+                    _buildMasterIfReleaseBranch(scmMetadata)
+
                 } finally {
 
                     deleteDir()
                 }
             }
         }
+    }
+}
+
+def _assertValidBranchType() {
+
+    isReleaseOrPR = _isReleaseOrPr()
+    isFeature= _isFeature()
+
+    if (!isReleaseOrPR && !isFeature) {
+
+        error("Only 'feature/', 'release/', 'PR-' and 'master' branches can be built.")
     }
 }
 
@@ -119,6 +134,28 @@ def _getApplicationDefinitionFilePath() {
     return 'applicationDefinition.yaml'
 }
 
+def _validateReleaseBranch(applicationDefinition, scmMetadata) {
+
+    if (isReleaseBranch()==true) {
+
+        def majorVersion = applicationDefinition.Pipeline.MajorVersion
+        def archetype    = applicationDefinition.Pipeline.Archetype
+
+        _assertMajorVersionMatchesReleaseVersion(majorVersion)
+
+    }
+}
+
+def _assertMajorVersionMatchesReleaseVersion(majorVersion) {
+
+    relBranchNm = env.BRANCH_NAME.split('/')[-1]
+
+    if (majorVersion.toString() != relBranchNm) {
+
+        error("Major version in application definition, ${majorVersion}, does not match release branch name: ${relBranchNm}")
+    }
+}
+
 def _getPipelineDefinition(applicationDefinition) {
 
     // do cool stuff here
@@ -126,6 +163,27 @@ def _getPipelineDefinition(applicationDefinition) {
     return pipelineDefinition
 }
 
+def _isReleaseOrPr() {
+
+    def isRelease    = isRelease()
+    def isPr         = _isPr()
+
+    return isRelease || isPr
+}
+
+def _isPr() {
+
+    return env.BRANCH_NAME ==~ /PR-\d+/
+}
+
+def _isFeature() {
+
+    isTruFals = env.BRANCH_NAME ==~ /feature\/.+/
+
+    return isTruFals
+}
+
+// ML - we are not using this at the moment, I think we are likely to use it sometime in the future.
 def _getFirstKeyFromMap(map) {
 
     return (map.keySet() as List)[0]
@@ -145,7 +203,15 @@ def _getRepositoryName(scmMetadata) {
     return scmMetadata.GIT_URL.split(/\//)[-1][0..-5]
 }
 
+def _buildMasterIfReleaseBranch(scmMetadata) {
 
+    if (isReleaseBranch()) {
+
+        def repositoryName = _getRepositoryName(scmMetadata)
+
+        build job: "${repositoryName}/master" // this will wait, AND fail if master fails
+    }
+}
 
 
 
