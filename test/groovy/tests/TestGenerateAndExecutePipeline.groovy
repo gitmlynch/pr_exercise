@@ -58,16 +58,6 @@ class TestGenerateAndExecutePipeline extends PipelineStepSpecification {
         return create0ArgMock('_isPr')
     }
 
-    def createIsReleaseOrPrMock() {
-
-        return create0ArgMock('_isReleaseOrPr')
-    }
-
-    def createIsFeatureMock() {
-
-        return create0ArgMock('_isFeature')
-    }
-
     def 'main script calls _generateAndExecutePipeline'() {
 
         given:
@@ -137,7 +127,6 @@ class TestGenerateAndExecutePipeline extends PipelineStepSpecification {
         def mockAssertCodeowners           = create0ArgMock('_assertCodeowners')
         def mockAssertReleaseUsesArchetype = create0ArgMock('_assertReleaseUsesArchetype')
         def mockGeneratePipeline           = create1ArgMock('_generatePipeline')
-        def mockBuildMasterIfReleaseBranch = create1ArgMock('_buildMasterIfReleaseBranch')
 
         setScmVariable(scm)
 
@@ -190,31 +179,6 @@ class TestGenerateAndExecutePipeline extends PipelineStepSpecification {
 
         then:
         1 * mockLeaveLock()
-    }
-
-    @Unroll
-    def '_isReleaseOrPr returns #isReleaseOrPr when isRelease returns #isReleaseValue and _isPr returns #isPr'() {
-
-        given:
-        def mockIsRelease = createIsReleaseMock()
-        def mockIsPr      = createIsPrMock()
-
-        when:
-        def actual = script._isReleaseOrPr()
-
-        then:
-        1 * mockIsRelease() >> isReleaseValue
-        1 * mockIsPr() >> isPr
-
-        then:
-        actual == isReleaseOrPr
-
-        where:
-        isReleaseValue | isPr  | isReleaseOrPr
-        false          | false | false
-        true           | false | true
-        false          | true  | true
-        true           | true  | true
     }
 
     def '_generatePipeline returns a fully-baked, callable, parameterless pipeline'() {
@@ -404,154 +368,6 @@ class TestGenerateAndExecutePipeline extends PipelineStepSpecification {
         phase = [(expected): []]
     }
 
-    @Unroll
-    def '_validateReleaseBranch validates required characteristics when isReleaseBranch is #isReleaseBranchValue'() {
-
-        given:
-        def majorVersion = generateInteger()
-        
-        def scmMetadata = generateUniqueValue()
-
-        def applicationDefinition = generateApplicationDefinition()
-
-        def archetype = applicationDefinition.Pipeline.Archetype
-
-        applicationDefinition.Pipeline.MajorVersion = majorVersion
-
-        def mockIsReleaseBranch = createIsReleaseBranchMock()
-
-        def mockAssertMajorVersionMatchesReleaseVersion = create1ArgMock('_assertMajorVersionMatchesReleaseVersion')
-        def mockAssertValidReleaseBranchArchetype       = create1ArgMock('_assertValidReleaseBranchArchetype')
-        def mockAssertAheadOfMaster                     = create2ArgMock('_assertAheadOfMaster')
-
-        when:
-        script._validateReleaseBranch(applicationDefinition, scmMetadata)
-
-        then:
-        1 * mockIsReleaseBranch() >> isReleaseBranchValue
-
-        then:
-        interactions * mockAssertMajorVersionMatchesReleaseVersion(majorVersion)
-        interactions * mockAssertValidReleaseBranchArchetype(archetype)
-        interactions * mockAssertAheadOfMaster(majorVersion, scmMetadata)
-
-        where:
-        isReleaseBranchValue << TRUE_FALSE
-        interactions = isReleaseBranchValue ? 1 : 0
-    }
-
-    def '_assertMajorVersionMatchesReleaseVersion throws an error when major version and release branch name mismatch'() {
-
-        given:
-        def exception = generateException()
-
-        def majorVersion      = generateInteger()
-        def releaseBranchName = majorVersion + 1
-
-        def mockError = createErrorMock()
-
-        setBranchName("release/${releaseBranchName}")
-
-        when:
-        script._assertMajorVersionMatchesReleaseVersion(majorVersion)
-
-        then:
-        1 * mockError("Major version in application definition, ${majorVersion}, does not match release branch name: ${releaseBranchName}") >> { throw exception }
-
-        and:
-        Exception actual = thrown()
-        actual == exception
-    }
-
-    def '_assertMajorVersionMatchesReleaseVersion does not throw an error when major version and release branch name match'() {
-
-        given:
-        def majorVersion = generateInteger()
-
-        def mockError = createErrorMock()
-
-        setBranchName("release/${majorVersion}")
-
-        when:
-        script._assertMajorVersionMatchesReleaseVersion(majorVersion)
-
-        then:
-        0 * mockError(_)
-    }
-
-    def '_assertValidBranchType throws an error when the branch is not feature/, release/, PR-, or master'() {
-
-        given:
-        def exception = generateException()
-
-        def mockIsReleaseOrPR = createIsReleaseOrPrMock()
-        def mockIsFeature     = createIsFeatureMock()
-        def mockError         = createErrorMock()
-
-        setBranchName(generateString())
-
-        when:
-        script._assertValidBranchType()
-
-        then:
-        1 * mockIsReleaseOrPR() >> false
-        1 * mockIsFeature() >> false
-
-        then:
-        1 * mockError("Only 'feature/', 'release/', 'PR-' and 'master' branches can be built.") >> { throw exception }
-
-        and:
-        Exception actual = thrown()
-        actual == exception
-    }
-
-    @Unroll
-    def '_assertValidBranchType does not throw an error when _isReleaseOrPR returns #isReleaseOrPr and _isFeature returns #isFeature'() {
-
-        given:
-        def mockIsReleaseOrPR = createIsReleaseOrPrMock()
-        def mockIsFeature     = createIsFeatureMock()
-        def mockError         = createErrorMock()
-
-        setBranchName(generateString())
-
-        when:
-        script._assertValidBranchType()
-
-        then:
-        1 * mockIsReleaseOrPR() >> isReleaseOrPr
-        1 * mockIsFeature() >> isFeature
-
-        then:
-        0 * mockError(*_)
-
-        where:
-        isReleaseOrPr | isFeature
-        true          | false
-        false         | true
-    }
-
-    @Unroll
-    def '_isFeature returns #isFeature for branch name #branchName'() {
-
-        given:
-        setBranchName(branchName)
-
-        when:
-        def actual = script._isFeature()
-
-        then:
-        actual == isFeature
-
-        where:
-        branchName                                | isFeature
-        "feature/${generateString()}"             | true
-        "${generateString()}/${generateString()}" | false
-        MASTER                                    | false
-        "PR-${generateInteger()}"                 | false
-        generateString()                          | false
-    }
-
     def '_getRepositoryName returns the repository name part of given scm metadata'() {
 
         given:
@@ -568,31 +384,4 @@ class TestGenerateAndExecutePipeline extends PipelineStepSpecification {
         actual == repoName
     }
 
-    @Unroll
-    def '_buildMasterIfReleaseBranch builds the master branch #interactions times when isReleaseBranch returns #isReleaseBranchValue'() {
-
-        given:
-        def name        = generateString()
-        def scmMetadata = generateString()
-
-        def mockIsReleaseBranch   = createIsReleaseBranchMock()
-        def mockGetRepositoryName = createGetRepositoryNameMock()
-        def mockBuild             = createBuildMock()
-
-        when:
-        script._buildMasterIfReleaseBranch(scmMetadata)
-
-        then:
-        1 * mockIsReleaseBranch() >> isReleaseBranchValue
-
-        then:
-        interactions * mockGetRepositoryName(scmMetadata) >> name
-
-        then:
-        interactions * mockBuild([job: "${name}/master"])
-
-        where:
-        isReleaseBranchValue << TRUE_FALSE
-        interactions = isReleaseBranchValue ? 1 : 0
-    }
 }
