@@ -26,9 +26,13 @@ class TestIsReleaseBranch extends PipelineStepSpecification {
         true     | "release/${generateInteger()}"
         false    | "Release/${generateInteger()}"
         false    | "release/${generateString()}"
-        false    | 'master'
         false    | "feature/${generateString()}"
-        false    | generateString()
+
     }
 }
+
+
+
+
+
 

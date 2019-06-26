@@ -198,14 +198,12 @@ class TestGenerateAndExecutePipeline extends PipelineStepSpecification {
         given:
         def mockIsRelease = createIsReleaseMock()
         def mockIsPr      = createIsPrMock()
-
         when:
         def actual = script._isReleaseOrPr()
 
         then:
         1 * mockIsRelease() >> isReleaseValue
         1 * mockIsPr() >> isPr
-
         then:
         actual == isReleaseOrPr
 
@@ -411,13 +409,9 @@ class TestGenerateAndExecutePipeline extends PipelineStepSpecification {
         def majorVersion = generateInteger()
         
         def scmMetadata = generateUniqueValue()
-
         def applicationDefinition = generateApplicationDefinition()
-
         def archetype = applicationDefinition.Pipeline.Archetype
-
         applicationDefinition.Pipeline.MajorVersion = majorVersion
-
         def mockIsReleaseBranch = createIsReleaseBranchMock()
 
         def mockAssertMajorVersionMatchesReleaseVersion = create1ArgMock('_assertMajorVersionMatchesReleaseVersion')
@@ -435,9 +429,11 @@ class TestGenerateAndExecutePipeline extends PipelineStepSpecification {
         interactions * mockAssertValidReleaseBranchArchetype(archetype)
         interactions * mockAssertAheadOfMaster(majorVersion, scmMetadata)
 
+
         where:
         isReleaseBranchValue << TRUE_FALSE
         interactions = isReleaseBranchValue ? 1 : 0
+
     }
 
     def '_assertMajorVersionMatchesReleaseVersion throws an error when major version and release branch name mismatch'() {
