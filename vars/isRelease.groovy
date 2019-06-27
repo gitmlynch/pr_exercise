@@ -2,7 +2,7 @@ def call(Map args) {
 
     def isRelease = isReleaseBranch()
 
-    if (env.BRANCH_NAME == 'master') {
+    if (env.BRANCH_NAME.equals('master')) {
 
         def isMaster = true
 
