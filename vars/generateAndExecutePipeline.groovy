@@ -62,7 +62,7 @@ def _assertValidBranchType() {
     isReleaseOrPR = _isReleaseOrPr()
     isFeature= _isFeature()
 
-    if (!isReleaseOrPR && !isFeature) {
+    if (!(isReleaseOrPR || isFeature)) {
 
         error("Only 'feature/', 'release/', 'PR-' and 'master' branches can be built.")
     }
