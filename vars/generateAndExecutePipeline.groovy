@@ -136,7 +136,7 @@ def _getApplicationDefinitionFilePath() {
 
 def _validateReleaseBranch(applicationDefinition, scmMetadata) {
 
-    if (isReleaseBranch()==true) {
+    if (isReleaseBranch()) {
 
         def majorVersion = applicationDefinition.Pipeline.MajorVersion
         def archetype    = applicationDefinition.Pipeline.Archetype
